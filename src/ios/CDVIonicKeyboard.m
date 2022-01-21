@@ -113,7 +113,9 @@ NSString* UITraitsClassString;
         NSLog(@"CDVIonicKeyboard: WARNING!!: Keyboard plugin works better with WK");
     }
 
-    if (isWK) {
+    BOOL disabledAdjustScrollView = ![settings cordovaBoolSettingForKey:@"AdjustScrollView" defaultValue:YES];
+
+    if (isWK && disabledAdjustScrollView) {
         [nc removeObserver:self.webView name:UIKeyboardWillHideNotification object:nil];
         [nc removeObserver:self.webView name:UIKeyboardWillShowNotification object:nil];
         [nc removeObserver:self.webView name:UIKeyboardWillChangeFrameNotification object:nil];
