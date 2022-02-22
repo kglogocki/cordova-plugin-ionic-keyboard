@@ -16,6 +16,7 @@ import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
 import android.view.Window;
+import android.view.WindowInsets;
 import android.view.inputmethod.InputMethodManager;
 
 // import additionally required classes for calculating screen height
