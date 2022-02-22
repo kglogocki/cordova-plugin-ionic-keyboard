@@ -91,48 +91,46 @@ public class CDVIonicKeyboard extends CordovaPlugin {
                             // cache properties for later use
                             int rootViewHeight = rootView.getRootView().getHeight();
                             int resultBottom = r.bottom;
+                            int screenHeight;
 
                             // calculate screen height differently for android versions >= 21: Lollipop 5.x, Marshmallow 6.x
                             //http://stackoverflow.com/a/29257533/3642890 beware of nexus 5
                             int screenHeight;
 
-                            if (Build.VERSION.SDK_INT >= 21) {
-                                Display display = cordova.getActivity().getWindowManager().getDefaultDisplay();
+                            if (Build.VERSION.SDK_INT >= 23) {
+                                WindowInsets windowInsets = rootView.getRootWindowInsets();
+                                int stableInsetBottom = windowInsets.getStableInsetBottom();
+                                screenHeight = rootViewHeight;
+                                resultBottom = resultBottom + stableInsetBottom;
+                            } else {
+                                // calculate screen height differently for android versions <23: Lollipop 5.x, Marshmallow 6.x
+                                //http://stackoverflow.com/a/29257533/3642890 beware of nexus 5
+                                Display display = activity.getWindowManager().getDefaultDisplay();
                                 Point size = new Point();
                                 display.getSize(size);
                                 screenHeight = size.y;
-                            } else {
-                                screenHeight = rootViewHeight;
                             }
 
                             int heightDiff = screenHeight - resultBottom;
 
-                            int pixelHeightDiff = (int)(heightDiff / density);
-                            if (pixelHeightDiff > 100 && pixelHeightDiff != previousHeightDiff) { // if more than 100 pixels, its probably a keyboard...
-                                String msg = "S" + Integer.toString(pixelHeightDiff);
-                                result = new PluginResult(PluginResult.Status.OK, msg);
-                                result.setKeepCallback(true);
-                                callbackContext.sendPluginResult(result);
-                            }
-                            else if ( pixelHeightDiff != previousHeightDiff && ( previousHeightDiff - pixelHeightDiff ) > 100 ){
-                            	String msg = "H";
-                                result = new PluginResult(PluginResult.Status.OK, msg);
-                                result.setKeepCallback(true);
-                                callbackContext.sendPluginResult(result);
+                            int pixelHeightDiff = (int) (heightDiff / density);
+                            if (keyboardEventListener != null) {
+                                if (pixelHeightDiff > 100 && pixelHeightDiff != previousHeightDiff) { // if more than 100 pixels, its probably a keyboard...
+                                    keyboardEventListener.onKeyboardEvent(EVENT_KB_WILL_SHOW, pixelHeightDiff);
+                                    keyboardEventListener.onKeyboardEvent(EVENT_KB_DID_SHOW, pixelHeightDiff);
+                                } else if (pixelHeightDiff != previousHeightDiff && (previousHeightDiff - pixelHeightDiff) > 100) {
+                                    keyboardEventListener.onKeyboardEvent(EVENT_KB_WILL_HIDE, 0);
+                                    keyboardEventListener.onKeyboardEvent(EVENT_KB_DID_HIDE, 0);
+                                }
+                            } else {
+                                Logger.warn("Native Keyboard Event Listener not found");
                             }
                             previousHeightDiff = pixelHeightDiff;
                         }
 
                         private void possiblyResizeChildOfContent() {
                             int usableHeightNow = computeUsableHeight();
-                            if (usableHeightNow != usableHeightPrevious) {
-                                // int usableHeightSansKeyboard = mChildOfContent.getRootView().getHeight();
-                                // int heightDifference = usableHeightSansKeyboard - usableHeightNow;
-                                // if (heightDifference > (usableHeightSansKeyboard/4)) {
-                                //     frameLayoutParams.height = usableHeightSansKeyboard - heightDifference;
-                                // } else {
-                                //     frameLayoutParams.height = usableHeightSansKeyboard;
-                                // }
+                            if (usableHeightPrevious != usableHeightNow) {
                                 frameLayoutParams.height = usableHeightNow;
                                 mChildOfContent.requestLayout();
                                 usableHeightPrevious = usableHeightNow;
@@ -142,15 +140,15 @@ public class CDVIonicKeyboard extends CordovaPlugin {
                         private int computeUsableHeight() {
                             Rect r = new Rect();
                             mChildOfContent.getWindowVisibleDisplayFrame(r);
-                            // return (r.bottom - r.top);
-                            return isFullScreen() ? r.bottom - r.top : r.height();
+                            return isOverlays() ? r.bottom : r.height();
                         }
 
-                        private boolean isFullScreen() {
-                            final Window window = cordova.getActivity().getWindow();
-                            // Flag set by status bar plugin to make content full screen
-                            int fullScreenFlag = View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN;
-                            return (window.getDecorView().getSystemUiVisibility() & fullScreenFlag) == fullScreenFlag;
+                        private boolean isOverlays() {
+                            final Window window = activity.getWindow();
+                            return (
+                                (window.getDecorView().getSystemUiVisibility() & View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN) ==
+                                View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                            );
                         }
                     };
 
