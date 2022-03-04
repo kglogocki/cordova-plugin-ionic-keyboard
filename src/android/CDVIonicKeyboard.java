@@ -12,6 +12,7 @@ import org.json.JSONException;
 import android.content.Context;
 import android.graphics.Rect;
 import android.util.DisplayMetrics;
+import android.view.DisplayCutout;
 import android.view.View;
 import android.view.ViewTreeObserver;
 import android.view.ViewTreeObserver.OnGlobalLayoutListener;
@@ -107,9 +108,9 @@ public class CDVIonicKeyboard extends CordovaPlugin {
                                 display.getSize(size);
                                 screenHeight = size.y;
                             }
-
+                            
                             int heightDiff = screenHeight - resultBottom;
-
+                            
                             int pixelHeightDiff = (int) (heightDiff / density);
                             if (pixelHeightDiff > 100 && pixelHeightDiff != previousHeightDiff) { // if more than 100 pixels, its probably a keyboard...
                                 String msg = "S" + Integer.toString(pixelHeightDiff);
@@ -118,15 +119,15 @@ public class CDVIonicKeyboard extends CordovaPlugin {
                                 callbackContext.sendPluginResult(result);
                             }
                             else if ( pixelHeightDiff != previousHeightDiff && ( previousHeightDiff - pixelHeightDiff ) > 100 ){
-                            	String msg = "H";
+                                String msg = "H";
                                 result = new PluginResult(PluginResult.Status.OK, msg);
                                 result.setKeepCallback(true);
                                 callbackContext.sendPluginResult(result);
                             }
-
+                            
                             previousHeightDiff = pixelHeightDiff;
                         }
-
+                        
                         private void possiblyResizeChildOfContent() {
                             int usableHeightNow = computeUsableHeight();
                             if (usableHeightPrevious != usableHeightNow) {
@@ -135,19 +136,26 @@ public class CDVIonicKeyboard extends CordovaPlugin {
                                 usableHeightPrevious = usableHeightNow;
                             }
                         }
-
+                        
                         private int computeUsableHeight() {
                             Rect r = new Rect();
                             mChildOfContent.getWindowVisibleDisplayFrame(r);
-                            return isOverlays() ? r.bottom : r.height();
+                            DisplayCutout cutout = getCutout();
+                            int usableHeight = (isOverlays() ? r.bottom : r.height());
+                            
+                            return (cutout == null ? usableHeight : usableHeight - cutout.getSafeInsetTop());
                         }
-
+                        
                         private boolean isOverlays() {
                             final Window window = cordova.getActivity().getWindow();
                             return (
                                 (window.getDecorView().getSystemUiVisibility() & View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN) ==
                                 View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
                             );
+                        }
+
+                        private DisplayCutout getCutout() {
+                            return cordova.getActivity().getWindowManager().getDefaultDisplay().getCutout();
                         }
                     };
 
